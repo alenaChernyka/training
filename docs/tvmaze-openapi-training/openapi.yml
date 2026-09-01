@@ -1,0 +1,1045 @@
+openapi: 3.2.0
+
+info:
+  title: "TVmaze API"
+  description: >
+    TVmaze API provides data about television shows and related content.
+    The API supports searching for shows and people, accessing show and
+    episode information, retrieving episode schedules, and viewing cast
+    and crew information.
+  version: "1.0.0"
+  contact:
+    name: TVmaze
+    url: https://www.tvmaze.com/api
+  license:
+    name: CC BY-SA 4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+
+servers:
+  - url: https://api.tvmaze.com
+
+paths:
+  /search/shows:
+    get:
+      tags:
+        - Search
+      summary: Search for shows by name
+      description: 'Searches the TVmaze database for shows by name. Results are ordered by relevance.'
+      operationId: showsByName
+      parameters:
+        - $ref: '#/components/parameters/ShowQuery'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShowSearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                MissingParameters:
+                  $ref: '#/components/examples/MissingParameters'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /singlesearch/shows:
+    get:
+      tags:
+        - Search
+      summary: Search for a show by name
+      description: >
+        Searches the TVmaze database for a show by name. Returns exactly one result, or no result at all. For duplicate show names, the returned show is undefined. Use the search endpoint to find the correct show.
+      operationId: oneShowByName
+      parameters:
+        - $ref: '#/components/parameters/ShowQuery'
+        - $ref: '#/components/parameters/Embed'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Show'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidEmbed:
+                  $ref: '#/components/examples/InvalidEmbed'
+                MissingRequiredParameters:
+                  $ref: '#/components/examples/MissingRequiredParameters'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: "null"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /lookup/shows:
+    get:
+      tags:
+        - Search
+      summary: Search for shows by external ID
+      description: >
+        Searches the TVmaze database for shows by its TheTVDB, TVRage, or IMDb ID. Specify one of `tvrage`, `thetvdb`, or `imdb`. At least one parameter is required.
+      operationId: showLookup
+      parameters:
+        - $ref: '#/components/parameters/Tvrage'
+        - $ref: '#/components/parameters/Thetvdb'
+        - $ref: '#/components/parameters/Imdb'
+      responses:
+        '301':
+          description: >
+            Match found. Redirects to the show's URL (`/shows/:id`) via the `Location` header. Most HTTP clients follow this automatically and show the final 200 response instead.
+          headers:
+            Location:
+              description: URL of the matched show.
+              schema:
+                type: string
+                format: uri
+              example: https://api.tvmaze.com/shows/2993
+        '200':
+          description: >
+            Match found, as seen by clients that follow redirects automatically (browsers, Postman, and Swagger UI's "Try it out"). This is the final response after following the 301 redirect.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Show'
+        '404':
+          description: No matching show found.
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                MissingParameters:
+                  $ref: '#/components/examples/MissingParameters'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /search/people:
+    get:
+      tags:
+        - Search
+      summary: Search people by name
+      description: 'Searches the TVmaze database for people by name. Results are ordered by relevance.'
+      operationId: peopleByName
+      parameters:
+        - $ref: '#/components/parameters/PersonQuery'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeopleSearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                MissingParameters:
+                  $ref: '#/components/examples/MissingParameters'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /schedule:
+    get:
+      tags:
+        - Schedule
+      summary: Get TV schedule
+      description: >
+        Retrieve the complete schedule of episodes airing in a specific country on a given date. Episodes are returned in airdate order and include full information about the episode and a show. Global Web Channels such as Netflix are not included.
+      operationId: countrySchedule
+      parameters:
+        - $ref: '#/components/parameters/Country'
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryScheduleResponse'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidDate:
+                  $ref: '#/components/examples/InvalidDate'
+                InvalidCountryCode:
+                  $ref: '#/components/examples/InvalidCountryCode'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /schedule/web:
+    get:
+      tags:
+        - Schedule
+      summary: Get Web Channel schedule
+      description: >
+        Retrieve the schedule of episodes airing on local and global Web Channels for a given date. Episodes are returned in airdate order and include full information about the episode and a show. 
+      operationId: webSchedule
+      parameters:
+        - $ref: '#/components/parameters/WebCountry'
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidDate:
+                  $ref: '#/components/examples/InvalidDate'
+                InvalidCountryCode:
+                  $ref: '#/components/examples/InvalidCountryCode'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /schedule/full:
+    get: 
+      tags:
+        - Schedule
+      summary: Get full schedule
+      description: >
+        Retrieve all future episodes known to TVmaze, regardless of country. The response is several MB in size and is cached for 24 hours. Episodes are returned in airdate order and include full information about the episode and a show. 
+      operationId: fullSchedule
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /shows/{id}:
+    get:
+      tags:
+        - Show
+      summary: Show main information
+      description: 'Retrieve primary information about a show.'
+      operationId: show
+      parameters:
+        - $ref: '#/components/parameters/ShowId'
+        - $ref: '#/components/parameters/Embed'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Show'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidRoute:
+                  $ref: '#/components/examples/InvalidRoute'
+                showIdNotFound:
+                  $ref: '#/components/examples/ShowIdNotFound'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidEmbed:
+                  $ref: '#/components/examples/InvalidEmbed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /shows/{id}/episodes:
+    get:
+      tags:
+        - Show
+      summary: Show episode list
+      description: 'Retrieve all episodes for the given show in airing order.'
+      operationId: showEpisodes
+      parameters:
+        - $ref: '#/components/parameters/ShowId'
+        - $ref: '#/components/parameters/Specials'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Episodes'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidRoute:
+                  $ref: '#/components/examples/InvalidRoute'
+                showIdNotFound:
+                  $ref: '#/components/examples/ShowIdNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  parameters:
+    ShowQuery:
+      name: q
+      in: query
+      description: '**Name of TV show**. The search tolerates minor spelling errors in the query.'
+      required: true
+      schema:
+        type: string
+      example: Stranger Things
+
+    PersonQuery:
+      name: q
+      in: query
+      description: '**Name of a cast or a crew member**. The search tolerates minor spelling errors in the query.'
+      required: true
+      schema:
+        type: string
+      example: Finn Wolfhard
+
+    Embed:
+      name: embed[]
+      in: query
+      description: >
+        **Data to embed in the response**. You can embed multiple values, for example: `?embed[]=episodes&embed[]=cast`.
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - episodes
+            - cast
+            - previousepisode
+            - nextepisode
+      style: form
+      explode: true
+
+    Tvrage:
+      name: tvrage
+      in: query
+      description: '**Tvrage ID**. The show''s identifier on tvrage.com.'
+      required: false
+      schema:
+        type: integer
+      example: 48493
+
+    Thetvdb:
+      name: thetvdb
+      in: query
+      description: '**TheTVDB ID**. The show''s identifier on TheTVDB.com.'
+      required: false
+      schema:
+        type: integer
+      example: 305288
+
+    Imdb:
+      name: imdb
+      in: query
+      description: '**IMDB ID**. The show''s identifier on IMDB.com.'
+      required: false
+      schema:
+        type: string
+      example: tt4574334
+
+    Country:
+      name: country
+      in: query
+      description: >
+        **Country code**. Use an [ISO 3166-1](https://www.iso.org/iso-3166-country-codes.html) code of the country. Defaults to `US`.
+      required: false
+      schema:
+        type: string
+      example: US
+
+    WebCountry:
+      name: country
+      in: query
+      description: >
+        **Country code**. Use an [ISO 3166-1](https://www.iso.org/iso-3166-country-codes.html) country code to retrieve local Web Channels. Leave empty to retrieve global Web Channels, or omit the parameter to retrieve both.
+      required: false
+      schema:
+        type: string
+      example: US
+
+    Date:
+      name: date
+      in: query
+      description: >
+        **Date**. Use an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601#Dates) formatted date. Defaults to the current day.
+      required: false
+      schema:
+        type: string
+        format: date
+      example: 2016-07-15
+
+    ShowId:
+      name: id
+      in: path
+      description: '**Show ID**. The unique identifier of the show on TVmaze.'
+      required: true
+      schema:
+        type: integer
+      example: 2993
+
+    Specials:
+      name: specials
+      in: query
+      description: >
+        **Include specials**. Use `1` to include both significant and insignificant
+        special episodes in the list. Any non-empty value other than `0` also
+        includes specials.
+      required: false
+      schema:
+        type: string
+      example: 1
+
+  schemas:
+    Show:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 'Unique identifier of the show on TVmaze.'
+          example: 2993
+
+        url:
+          type: string
+          format: uri
+          description: 'Link to the show''s page on the TVmaze website.'
+          example: https://www.tvmaze.com/shows/2993/stranger-things
+
+        name:
+          type: string
+          description: 'Name of the show.'
+          example: Stranger Things
+
+        type:
+          type: string
+          description: 'Type of show, e.g. Scripted, Animation, Reality, Talk Show, Documentary.'
+          example: Scripted
+
+        language:
+          type: string
+          description: 'Primary spoken language of the show.'
+          example: English
+
+        genres:
+          type: array
+          items:
+            type: string
+          description: 'List of genres associated with the show.'
+          example:
+            - Drama
+            - Horror
+            - Science-Fiction
+
+        status:
+          type: string
+          description: 'Current production status of the show, e.g. Running, Ended, To Be Determined, In Development.'
+          example: Ended
+
+        runtime:
+          type:
+            - integer
+            - "null"
+          description: 'Runtime of a single episode, in minutes, as originally scheduled. `null` if unknown or if the show has moved to streaming and no longer has a fixed runtime — use `averageRuntime` instead.'
+          example: null
+
+        averageRuntime:
+          type: integer
+          description: 'Average runtime of episodes, in minutes, calculated from the actual runtimes of aired episodes. More reliable than `runtime` for shows with varying episode lengths.'
+          example: 65
+
+        premiered:
+          type: string
+          format: date
+          description: 'Date the show first aired.'
+          example: 2016-07-15
+
+        ended:
+          type:
+            - string
+            - "null"
+          format: date
+          description: 'Date the show ended. `null` if the show is still running or has not yet premiered.'
+          example: 2025-12-31
+
+        officialSite:
+          type:
+            - string
+            - "null"
+          format: uri
+          description: 'URL of the show''s official website. `null` if not available.'
+          example: https://www.netflix.com/title/80057281
+
+        schedule:
+          type: object
+          description: 'The show''s regular broadcast schedule.'
+          properties:
+            time:
+              type: string
+              description: 'Local air time, in 24-hour `HH:MM` format. Empty string if the show has no fixed air time (e.g. shows released all at once on streaming).'
+              example: ""
+            days:
+              type: array
+              items:
+                type: string
+              description: 'Days of the week the show airs. Empty array if there is no regular schedule.'
+              example:
+                - Wednesday
+
+        rating:
+          anyOf:
+            - $ref: '#/components/schemas/Rating'
+            - type: null
+          description: 'User rating information for the show.'
+          example:
+            average: 8.4
+
+        weight:
+          type: integer
+          description: 'Internal popularity ranking used by TVmaze to sort shows, derived from a combination of user votes, follow counts, and page views. Higher values indicate greater relative popularity; this is not the same as the user rating.'
+          example: 100
+
+        network:
+          type:
+            - object
+            - "null"
+          description: 'The traditional TV network that airs the show. `null` if the show airs exclusively on a web/streaming channel — see `webChannel` instead.'
+          example: null
+          properties:
+            id:
+              type: integer
+              description: 'Unique identifier of the network.'
+              example: 1
+            name:
+              type: string
+              description: 'Name of the network.'
+              example: NBC
+            country:
+              anyOf:
+              - $ref: '#/components/schemas/Country'
+              - type: "null"
+              description: 'Country where the network primarily broadcasts. `null` for some global networks.'
+
+        webChannel:
+          type:
+            - object
+            - "null"
+          description: 'The streaming/web platform that airs the show. `null` if the show airs on a traditional TV network — see `network` instead.'
+          properties:
+            id:
+              type: integer
+              description: 'Unique identifier of the web channel.'
+              example: 1
+            name:
+              type: string
+              description: 'Name of the web channel.'
+              example: Netflix
+            country:
+              anyOf:
+              - $ref: '#/components/schemas/Country'
+              - type: "null"
+              description: 'Country associated with the web channel. `null` for some global web channels.'
+
+        dvdCountry:
+          type:
+            - object
+            - "null"
+          description: 'Country associated with the show''s DVD/Blu-ray release, if it differs from the broadcast country. Usually `null`.'
+          example: null
+
+        externals:
+          type: object
+          description: 'Identifiers for this show on other, external databases.'
+          properties:
+            tvrage:
+              type:
+                - integer
+                - "null"
+              description: 'Show''s identifier on tvrage.com. `null` if not mapped.'
+              example: 48493
+            thetvdb:
+              type:
+                - integer
+                - "null"
+              description: 'Show''s identifier on TheTVDB.com. `null` if not mapped.'
+              example: 305288
+            imdb:
+              type:
+                - string
+                - "null"
+              description: 'Show''s identifier on IMDb. `null` if not mapped.'
+              example: tt4574334
+
+        image:
+          anyOf:
+            - $ref: '#/components/schemas/Image'
+            - null
+          description: 'Poster images for the show. `null` if no image is available.'
+          example:
+            medium: https://static.tvmaze.com/uploads/images/medium_portrait/595/1489169.jpg
+            original: https://static.tvmaze.com/uploads/images/original_untouched/595/1489169.jpg
+
+        summary:
+          type: string
+          description: 'Short synopsis of the show. May contain HTML markup, typically `<p>` tags.'
+          example: "<p>When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.</p>"
+
+        updated:
+          type: integer
+          description: 'Unix timestamp of when this show''s record was last updated on TVmaze.'
+          example: 1767306162
+
+        _links:
+          type: object
+          description: 'HAL-style hypermedia links to related resources.'
+          properties:
+            self:
+              $ref: '#/components/schemas/ShowLink'
+
+            previousepisode:
+              type: object
+              description: Link to the most recently aired episode.
+              properties:
+                href:
+                  type: string
+                  format: uri
+                  example: https://api.tvmaze.com/episodes/3046158
+                name:
+                  type: string
+                  example: "Chapter Eight: The Rightside Up"
+
+            nextepisode:
+              type: object
+              description: Link to the next episode, if available.
+              properties:
+                href:
+                  type: string
+                  format: uri
+                name:
+                  type: string
+
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 'Unique identifier of the person on TVmaze.'
+          example: 49095
+
+        url:
+          type: string
+          format: uri
+          description: 'Link to the person''s page on the TVmaze website.'
+          example: https://www.tvmaze.com/people/49095/finn-wolfhard
+
+        name:
+          type: string
+          description: 'Full name of the person.'
+          example: Finn Wolfhard
+
+        country:
+          anyOf:
+          - $ref: '#/components/schemas/Country'
+          - type: "null"
+          description: 'Country where the person was born.'
+
+        birthday:
+          type:
+            - string
+            - "null"
+          format: date
+          description: 'Date of birth. `null` if unknown.'
+          example: 2002-12-23
+
+        deathday:
+          type:
+            - string
+            - "null"
+          format: date
+          description: 'Date of death. `null` if the person is alive or the date is unknown.'
+          example: null
+
+        gender:
+          type: string
+          description: 'Gender of the person, as recorded by TVmaze, e.g. Male, Female.'
+          example: Male
+
+        image:
+          anyOf:
+            - $ref: '#/components/schemas/Image'
+            - null
+          description: 'Photos of the person. `null` if no image is available.'
+          example:
+            medium: https://static.tvmaze.com/uploads/images/medium_portrait/611/1527529.jpg
+            original: https://static.tvmaze.com/uploads/images/original_untouched/611/1527529.jpg
+
+        updated:
+          type: integer
+          description: 'Unix timestamp of when this person''s record was last updated on TVmaze.'
+          example: 1782685973
+
+        _links:
+          type: object
+          description: 'HAL-style hypermedia links to related resources.'
+          properties:
+            self:
+              type: object
+              description: Link to the person resource.
+              properties:
+                href:
+                  type: string
+                  format: uri
+                  example: https://api.tvmaze.com/people/49095
+
+    Episode:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 'Unique identifier of the episode on TVmaze.'
+          example: 553946
+
+        url:
+          type: string
+          format: uri
+          description: 'Link to the episode''s page on the TVmaze website.'
+          example: https://www.tvmaze.com/episodes/553946/stranger-things-1x01-chapter-one-the-vanishing-of-will-byers
+
+        name:
+          type: string
+          description: 'Title of the episode.'
+          example: 'Chapter One: The Vanishing of Will Byers'
+
+        season:
+          type: integer
+          description: 'Season number this episode belongs to.'
+          example: 1
+
+        number:
+          type:
+            - integer
+            - "null"
+          description: 'Episode number within the season. `null` for specials, which are not part of the regular episode sequence.'
+          example: 1
+
+        type:
+          type: string
+          description: 'Category of the episode: `regular` for a normal numbered episode, `significant_special` for a special that is important to the show''s storyline, or `insignificant_special` for a minor special (e.g. a preview or behind-the-scenes segment).'
+          example: regular
+
+        airdate:
+          type: string
+          format: date
+          description: 'Date the episode aired. For episodes airing after midnight, this reflects the previous calendar day — see `airstamp` for the technically correct date and time.'
+          example: 2016-07-15
+
+        airtime:
+          type: string
+          description: 'Local air time, in 24-hour `HH:MM` format. Empty string if no fixed air time is known (e.g. episodes released all at once on streaming).'
+          example: ""
+
+        airstamp:
+          type: string
+          format: date-time
+          description: 'Full air date and time, including UTC offset. Use this instead of `airdate`/`airtime` for episodes airing after midnight, where the technically correct date differs from `airdate`.'
+          example: 2016-07-15T12:00:00+00:00
+
+        runtime:
+          type:
+            - integer
+            - "null"
+          description: 'Runtime of the episode, in minutes. `null` if unknown.'
+          example: 49
+
+        rating:
+          anyOf:
+            - $ref: '#/components/schemas/Rating'
+            - type: null
+          description: 'User rating information for the episode.'
+          example:
+            average: 8
+
+        image:
+          anyOf:
+            - $ref: '#/components/schemas/Image'
+            - type: "null"
+          description: 'Images for the episode. `null` if no image is available.'
+          example:
+            medium: https://static.tvmaze.com/uploads/images/medium_landscape/342/855786.jpg
+            original: https://static.tvmaze.com/uploads/images/original_untouched/342/855786.jpg
+
+        summary:
+          type:
+            - string
+            - "null"
+          description: 'Short synopsis of the episode. May contain HTML markup, typically `<p>` tags. `null` if no summary is available.'
+          example: "<p>On his way home from a friend's house, young Will sees something terrifying. Nearby, a sinister secret lurks in the depths of a government lab.</p>"
+
+        _links:
+          type: object
+          description: 'HAL-style hypermedia links to related resources.'
+          properties:
+            self:
+              type: object
+              description: 'Link to the current episode resource.'
+              properties:
+                href:
+                  type: string
+                  format: uri
+                  example: https://api.tvmaze.com/episodes/553946
+
+            show:
+              $ref: '#/components/schemas/ShowLink'
+
+    Country:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Full name of the country.'
+          example: United States
+        code:
+          type: string
+          description: 'ISO 3166-1 alpha-2 country code.'
+          example: US
+        timezone:
+          type: string
+          description: 'IANA time zone identifier associated with the country.'
+          example: America/New_York   
+
+    Rating:
+      type: object
+      properties:
+        average:
+          type:
+            - number
+            - "null"
+          description: 'Average user rating, on a scale from 1 to 10. `null` if the show or episode has not received enough ratings.'
+
+    Image:
+      type: object
+      properties:
+        medium:
+          type: string
+          format: uri
+          description: 'URL of the medium-sized image.'
+        original:
+          type: string
+          format: uri
+          description: 'URL of the original, full-resolution image.'
+
+    ShowLink:
+      type: object
+      description: 'Link to the show.'
+      properties:
+        href:
+          type: string
+          format: uri
+          example: https://api.tvmaze.com/shows/2993
+        name:
+          type: string
+          example: Stranger Things
+
+    ShowSearchResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          score:
+            type: number
+            description: Relevance score of the search result.
+            example: 1.1912978
+          show:
+            $ref: '#/components/schemas/Show'
+
+    PeopleSearchResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          score:
+            type: number
+            description: Relevance score of the search result.
+            example: 1
+          person:
+            $ref: '#/components/schemas/Person'
+
+    CountryScheduleResponse:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/Episode'
+          - type: object
+            properties:
+              show:
+                $ref: '#/components/schemas/Show'
+
+    ScheduleResponse:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/Episode'
+          - type: object
+            properties:
+              _embedded:
+                type: object
+                description: 'Embedded resources related to this episode.'
+                properties:
+                  show:
+                    $ref: '#/components/schemas/Show'
+
+    Episodes:
+      type: array
+      items:
+        $ref: '#/components/schemas/Episode'
+
+    Error:
+      type: object
+      description: 'Standard error response returned by the API for 4xx and 5xx responses.'
+      properties:
+        name:
+          type: string
+          description: 'Short name of the error, corresponding to the HTTP status, e.g. "Bad Request", "Not Found".'
+        message:
+          type: string
+          description: 'Human-readable description of the error. May be an empty string if no additional detail is available.'
+        code:
+          type: integer
+          description: 'Numeric error code. Currently always `0` — reserved for future use.'
+        status:
+          type: integer
+          description: 'HTTP status code of the response, duplicated here for convenience.'
+        previous:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      description: 'Details about the underlying cause of the error, if applicable.'
+      properties:
+        name:
+          type: string
+          description: 'Short name of the underlying error.'
+        message:
+          type: string
+          description: 'Human-readable description of the underlying error.'
+        code:
+          type: integer
+          description: 'Numeric error code. Currently always `0` — reserved for future use.'
+
+  responses:
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            name: "Too Many Requests"
+            message: ""
+            code: 0
+            status: 429
+
+  examples:
+    InvalidEmbed:
+      summary: Invalid embed type
+      value:
+        name: "Bad Request"
+        message: "Invalid embed type"
+        code: 0
+        status: 400
+
+    MissingParameters:
+      summary: Missing parameters
+      value:
+        name: "Bad Request"
+        message: ""
+        code: 0
+        status: 400
+
+    MissingRequiredParameters:
+      summary: Missing required parameters
+      value:
+        name: "Bad Request"
+        message: "Missing required parameters: q"
+        code: 0
+        status: 400
+
+    InvalidCountryCode:
+      summary: Invalid country code
+      value:
+        name: "Unprocessable entity"
+        message: "Not a valid ISO country code"
+        code: 0
+        status: 422
+
+    InvalidDate:
+      summary: Invalid date
+      value:
+        name: "Unprocessable entity"
+        message: "Not a valid ISO date"
+        code: 0
+        status: 422
+
+    InvalidRoute:
+      summary: Invalid route
+      value:
+        name: "Not Found"
+        message: "Page not found."
+        code: 0
+        status: 404
+        previous:
+          name: "Invalid Route"
+          message: 'Unable to resolve the request "shows/2993df".'
+          code: 0
+
+    ShowIdNotFound:
+      summary: Show ID not found
+      value:
+        name: "Not Found"
+        message: ""
+        code: 0
+        status: 404
+
+tags:
+  - name: Search
+    description: 'Search for shows and people by name and retrieve their information and IDs.'
+  - name: Schedule
+    description: 'Retrieve TV and Web Channel schedules.'
+  - name: Show
+    description: 'Retrieve information about shows'
